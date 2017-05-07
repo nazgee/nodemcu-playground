@@ -11,17 +11,28 @@ String manageRequest(String request);
 /* Create the mesh node object */
 ESP8266WiFiMesh mesh_node = ESP8266WiFiMesh(ESP.getChipId(), manageRequest);
 
+#define LEDON() digitalWrite(LED_BUILTIN, LOW)
+#define LEDOFF() digitalWrite(LED_BUILTIN, HIGH)
 
 void blink(int blinksNumber) {
+	const int offtime = 100;
+	const int ontime = 30;
+
+
+	if (!digitalRead(LED_BUILTIN)) {
+		LEDOFF();
+		delay(offtime);
+	}
+
 	for (int i = 0; i < blinksNumber; i++) {
-		digitalWrite(LED_BUILTIN, LOW);
-		delay(30);
-		digitalWrite(LED_BUILTIN, HIGH);
+		LEDON();
+		delay(ontime);
+		LEDOFF();
 
 		if (i == blinksNumber - 1)
 			break;
 
-		delay(100);
+		delay(offtime);
 	}
 }
 
@@ -41,7 +52,7 @@ String manageRequest(String request)
 	char response[60];
 	sprintf(response, "Hello world response #%d from Mesh_Node%d.", response_i++, ESP.getChipId());
 
-	blink(1);
+	blink(3);
 
 	return response;
 }
@@ -52,11 +63,14 @@ void setup()
 	delay(10);
 
 	pinMode(LED_BUILTIN, OUTPUT);
+	blink(5);
 
 	Serial.println();
 	Serial.println();
-	Serial.printf("Setting up mesh node... me=%d\n", ESP.getChipId());
+	Serial.printf("Setting up mesh node... me=%d\r\n", ESP.getChipId());
 
+
+//	randomSeed(ESP.getChipId());
 	/* Initialise the mesh node */
 	mesh_node.begin();
 }
@@ -64,14 +78,23 @@ void setup()
 void loop()
 {
 	/* Accept any incoming connections */
+	//Serial.println("accept...");
 	mesh_node.acceptRequest();
 
-	/* Scan for other nodes and send them a message */
-	char request[60];
-	sprintf(request, "Hello world request #%d from Mesh_Node%d.", request_i++, ESP.getChipId());
+	static int acceptsNumber = random(25, 100);
+	if (acceptsNumber == 0) {
+		acceptsNumber = random(25, 100);
 
-	blink(2);
+		/* Scan for other nodes and send them a message */
+		char request[60];
+		sprintf(request, "Hello world request #%d from Mesh_Node%d.", request_i++, ESP.getChipId());
+		Serial.println("scan...");
+		LEDON();
+		mesh_node.attemptScan(request);
+		LEDOFF();
+		Serial.println("scan completed!");
+	}
+	acceptsNumber--;
 
-	mesh_node.attemptScan(request);
-	delay(1000);
+	delay(100);
 }
